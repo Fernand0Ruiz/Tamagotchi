@@ -1,5 +1,5 @@
 
-class Tamagotchi:
+class Modal:
 
     def __init__(self, name):
         self.name = name
