@@ -1,4 +1,4 @@
-from Controller import Controller
+from View import View
 
-Tamagotchi = Controller()
-Tamagotchi.run()
+play = View()
+play.run()

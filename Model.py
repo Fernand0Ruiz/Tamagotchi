@@ -1,5 +1,4 @@
-
-class Modal:
+class Tamagotchi:
 
     def __init__(self, name):
         self.name = name
@@ -9,6 +8,7 @@ class Modal:
         self.health = 100
         self.alive = True
         self.sick = False
+        self.poop = 0;
     
     def __init__(self, name, hunger, happiness, age, health, alive, sick):
         self.name = name
@@ -18,6 +18,7 @@ class Modal:
         self.health = health
         self.alive = alive
         self.sick = sick
+        self.poop = 0;
 
     def get_name(self) -> str:
         return self.name
@@ -40,6 +41,9 @@ class Modal:
     def get_is_sick(self) -> bool:
         return self.sick
     
+    def get_poop(self) -> int:
+        return self.poop    
+    
     def set_name(self,name: str):
         self.name = name
 
@@ -60,4 +64,7 @@ class Modal:
 
     def set_is_sick(self, sick: bool):
         self.sick = sick
+
+    def set_poop(self, poop: int):
+        self.poop = poop
     
