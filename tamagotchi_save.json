@@ -3,6 +3,10 @@
     "age": 1,
     "weight": 250,
     "mood": 2,
-    "health": 100,
-    "last_saved": null
+    "health": 2530,
+    "poop": 2430,
+    "alive": true,
+    "last_saved": null,
+    "action": "idle",
+    "background": 1
 }

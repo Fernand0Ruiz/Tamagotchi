@@ -4,7 +4,23 @@ import os
 class Model:
     def __init__(self):
         self.data_manager = DataManager()
+        self._observers = []  # List to store observer callbacks
         self.load_game_state()
+    
+    def add_observer(self, callback):
+        """Add an observer callback function"""
+        if callback not in self._observers:
+            self._observers.append(callback)
+    
+    def remove_observer(self, callback):
+        """Remove an observer callback function"""
+        if callback in self._observers:
+            self._observers.remove(callback)
+    
+    def _notify_observers(self):
+        """Notify all observers of a change"""
+        for observer in self._observers:
+            observer()
     
     def load_game_state(self):
         """Load the game state from saved data"""
@@ -14,6 +30,11 @@ class Model:
         self.weight = data["weight"]
         self.mood = data["mood"]
         self.health = data["health"]
+        self.poop = data["poop"]
+        self.alive = data["alive"]
+        self.last_saved = data["last_saved"]
+        self.action = data["action"]
+        self.background = data["background"]
 
     def save_game_state(self):
         """Save the current game state"""
@@ -23,7 +44,11 @@ class Model:
             "weight": self.weight,
             "mood": self.mood,
             "health": self.health,
-            "last_saved": None  # You could add timestamp here if you want
+            "poop": self.poop,
+            "alive": self.alive,
+            "last_saved": None,  # You could add timestamp here if you want
+            "action": self.action,
+            "background": self.background
         }
         return self.data_manager.save_data(data)
 
@@ -46,28 +71,58 @@ class Model:
         return self.alive
     
     def get_poop(self) -> int:
-        return self.poop    
+        return self.poop 
+
+    def get_weight(self) -> int:
+        return self.weight
+    
+    def get_mood(self) -> int:
+        return self.mood
+    
+    def get_last_saved(self) -> str:
+        return self.last_saved
+    
+    def get_action(self) -> str:
+        return self.action 
+
+    def get_background(self) -> str:
+        return self.background
     
     def set_name(self,name: str):
         self.name = name
+        self._notify_observers()
 
     def set_hunger(self,hunger: int):
         self.hunger = hunger
+        self._notify_observers()
     
     def set_happiness(self, happiness: int):
         self.happiness = happiness
+        self._notify_observers()
 
     def set_age(self, age: int):
         self.age = age
+        self._notify_observers()
 
     def set_health(self, health: int):
         self.health = health
+        self._notify_observers()
 
     def set_is_alive(self,alive: bool):
         self.alive = alive
+        self._notify_observers()
 
     def set_poop(self, poop: int):
         self.poop = poop
+        self._notify_observers()
+
+    def set_action(self, action: str):
+        self.action = action
+        self._notify_observers()
+    
+    def set_background(self, background: int):
+        self.background = background
+        self._notify_observers()
 
 class DataManager:
     def __init__(self):
@@ -78,7 +133,11 @@ class DataManager:
             "weight": 250,
             "mood": 2,
             "health": 100,
-            "last_saved": None
+            "poop": 0,  
+            "alive": True,
+            "last_saved": None,
+            "action": "idle",
+            "background": 0
         }
 
     def save_data(self, data):
