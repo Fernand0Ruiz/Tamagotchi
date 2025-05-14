@@ -7,11 +7,11 @@ from Animate import SpriteAnimator
 
 #Mood Image paths to be set based off stats.
 mood_imgs = [
-    "Assets/Moods/mood_angry.png",
-    "Assets/Moods/mood_dance.png",
     "Assets/Moods/mood_happy.png",
     "Assets/Moods/mood_middle.png",
+    "Assets/Moods/mood_angry.png",
     "Assets/Moods/mood_sad.png",
+    "Assets/Moods/mood_dance.png",
     "Assets/Moods/mood_sleep.png"
 ]
 
@@ -41,7 +41,7 @@ button_border_color = "#796344"
 class View:
     def __init__(self):
         self.app = ctk.CTk()
-        self.tamagotchi = Model()
+        self.tamagotchi = Model(self.app)
         self.controller = Controller(self.tamagotchi, self.app)
         self.tamagotchi.add_observer(self.update_view)
         self.name = None
@@ -53,7 +53,12 @@ class View:
         self.create_app()
 
     def run(self):
-        self.app.mainloop()
+        try:
+            self.app.mainloop()
+        finally:
+            # Cleanup when window is closed
+            if hasattr(self, 'tamagotchi'):
+                self.tamagotchi.stop()
 
     def create_app(self):
         #set sys. settings, app settings, and background img.

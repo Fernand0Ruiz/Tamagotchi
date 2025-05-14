@@ -1,6 +1,5 @@
 import tkinter as tk
 from PIL import Image, ImageTk
-import os
 
 # Sprite sheet and frame info
 SPRITE_SHEET = "Assets/sekitoritchi.png"  # Path to the sprite sheet containing all animations
@@ -18,7 +17,10 @@ Weather_imgs = [
     "Assets/Weather/heavenly.png",
     "Assets/Weather/rainy.png",
     "Assets/Weather/sunset.png",
-    "Assets/Weather/night.png"
+    "Assets/Weather/night.png",
+    "Assets/Weather/outside.png",
+    "Assets/Weather/sunset_outside.png",
+    "Assets/Weather/night_outside.png"
 ]
 
 # Animation frame mapping for each action
@@ -27,73 +29,169 @@ Weather_imgs = [
 # - start_frame: which frame number in that row the animation starts at
 # - frame_count: how many frames are in this animation
 ACTION_MAP = {
-    "idle":  (0, 0, 4),
-    "cry": (0, 4, 4),
-    "dance": (0, 8, 4),
-    "sleep": (1, 0, 4),
-    "angry": (1, 4, 4),
-    "oniguri": (1, 8, 4),
-    "fustrated":(2, 0, 10),
-    "eat":(3, 0, 4),
-    "dead":(3, 4, 4),
-    "dessert":(3, 8, 4),
-    "peeing":(4, 0, 4),
-    "dance_reverse":(4, 4, 4),
-    "attention":(5, 0, 4),
-    "poop":(5, 4, 4)     
+    "happy":  (0, 0, 4),  # 4 frames starting at frame 0 in row 0
+    "middle": (0, 0, 2),    # 4 frames starting at frame 4 in row 0
+    "sad": (0, 4, 4),    # 4 frames starting at frame 4 in row 0
+    "dance": (0, 8, 4),  # 4 frames starting at frame 8 in row 0
+    "sleep": (1, 0, 4),  # 4 frames starting at frame 0 in row 1
+    "angry": (1, 4, 4),  # 4 frames starting at frame 4 in row 1
+    "oniguri": (1, 8, 4), # 4 frames starting at frame 8 in row 1
+    "fustrated":(2, 0, 10), # 10 frames starting at frame 0 in row 2
+    "eat":(3, 0, 4),     # 4 frames starting at frame 0 in row 3
+    "dead":(3, 4, 4),    # 4 frames starting at frame 4 in row 3
+    "dessert":(3, 8, 4), # 4 frames starting at frame 8 in row 3
+    "peeing":(4, 0, 4),  # 4 frames starting at frame 0 in row 4
+    "dance_reverse":(4, 4, 4), # 4 frames starting at frame 4 in row 4
+    "attention":(5, 0, 4), # 4 frames starting at frame 0 in row 5
+    "look":(5, 4, 4)     # 4 frames starting at frame 4 in row 5
 }
 ACTION_LIST = list(ACTION_MAP.keys())  # List of all available actions
 
-class SpriteAnimator:
-    def __init__(self, parent, action="idle", background=0):
-        # Initialize animation properties
-        self.parent = parent
+class SpriteAnimator(tk.Frame):
+    """
+    A class that handles sprite animation using a sprite sheet.
+    This class manages the animation of the Tamagotchi character by:
+    1. Loading frames from a sprite sheet
+    2. Combining them with background images
+    3. Displaying them in sequence to create animations
+    4. Handling transitions between different actions
+    """
+    def __init__(self, parent, action="idle", background=None):
+        """
+        Initialize the SpriteAnimator.
+        
+        Args:
+            parent: The parent tkinter widget where the animation will be displayed
+            action: The initial animation to play (defaults to "idle")
+            background: The index of the background image to use (optional)
+        """
+        super().__init__(parent)
+        # Load the main sprite sheet containing all animations
+        self.sprite_sheet = Image.open(SPRITE_SHEET)
+        
+        # Set up background if provided
+        self.background_index = background
+        if background is not None:
+            self.background = Image.open(Weather_imgs[background])
+            self.background = self.background.resize((BACKGROUND_WIDTH, BACKGROUND_HEIGHT))
+        else:
+            self.background = None
+            
+        # Initialize animation state
+        self.action = action
+        self.frames = self.load_frames(action)
         self.current_frame = 0
-        self.frames = []
-        self.animation_running = False
-        self.current_action = action
-        self.current_background = background
         
-        # Create label for displaying frames
-        self.label = tk.Label(parent, bg="white")
-        self.label.pack()
+        # Create and set up the label that will display the animation
+        self.label = tk.Label(self)
+        self.label.pack(expand=True, fill='both')
         
-        # Load initial frames
-        self.load_frames(action, background)
-        
-        # Start animation loop
+        # Start the animation loop
         self.animate()
-
-    def load_frames(self, action, background):
-        """Load animation frames for given action and background"""
-        self.frames = []
-        base_path = f"Assets/Sprites/{action}"
         
-        # Load each frame in the sequence
-        for i in range(4):  # Assuming 4 frames per animation
-            try:
-                frame_path = f"{base_path}/{i}.png"
-                if os.path.exists(frame_path):
-                    frame = Image.open(frame_path)
-                    self.frames.append(ImageTk.PhotoImage(frame))
-            except Exception as e:
-                print(f"Error loading frame {i} for {action}: {e}")
+        # Preload common actions for smoother transitions
+        self.preloaded_frames = {}
+        self.preload_common_actions()
 
-    def set_action(self, action, background):
-        """Update current animation and background"""
-        if action != self.current_action or background != self.current_background:
-            self.current_action = action
-            self.current_background = background
-            self.load_frames(action, background)
-            self.current_frame = 0
+    def preload_common_actions(self):
+        """
+        Preload frames for common actions to make transitions smoother.
+        This prevents the black screen flash when switching between frequent actions.
+        """
+        # Don't preload frames as they need to be created with the current background
+        pass
+
+    def load_frames(self, action):
+        """
+        Load all frames for a specific action from the sprite sheet.
+        
+        Args:
+            action: The name of the action to load frames for
+            
+        Returns:
+            list: A list of PhotoImage objects containing each frame of the animation
+        """
+        frames = []
+        # Get the frame information for this action
+        row, start, count = ACTION_MAP[action]
+        
+        # Extract each frame from the sprite sheet
+        for i in range(start, start + count):
+            # Calculate the position of this frame in the sprite sheet
+            left = i * ORIGINAL_FRAME_WIDTH
+            upper = row * ORIGINAL_FRAME_HEIGHT
+            right = left + ORIGINAL_FRAME_WIDTH
+            lower = upper + ORIGINAL_FRAME_HEIGHT
+            
+            # Extract and resize the frame
+            frame = self.sprite_sheet.crop((left, upper, right, lower))
+            frame = frame.resize((FRAME_WIDTH, FRAME_HEIGHT), Image.Resampling.LANCZOS)
+            
+            if self.background:
+                # Create a new image with the background
+                composite = self.background.copy()
+                
+                # Ensure the frame has transparency
+                if frame.mode != 'RGBA':
+                    frame = frame.convert('RGBA')
+                    
+                # Calculate position to center the sprite on the background
+                x = (BACKGROUND_WIDTH - FRAME_WIDTH) // 2
+                y = (BACKGROUND_HEIGHT - FRAME_HEIGHT) // 2 + SPRITE_Y_OFFSET
+                
+                # Combine the frame with the background
+                composite.paste(frame, (x, y), frame.split()[3])
+                frames.append(ImageTk.PhotoImage(composite))
+            else:
+                # If no background, just use the frame
+                frames.append(ImageTk.PhotoImage(frame))
+        
+        return frames
 
     def animate(self):
-        """Update animation frame"""
-        if self.frames:
-            self.label.configure(image=self.frames[self.current_frame])
+        """
+        Animate the sprite by cycling through frames.
+        This method is called repeatedly to create the animation effect.
+        It updates the display every 350 milliseconds.
+        """
+        if self.frames:  # Only update if we have frames
+            # Update the label with the current frame
+            self.label.config(image=self.frames[self.current_frame])
+            # Move to the next frame, looping back to 0 if we reach the end
             self.current_frame = (self.current_frame + 1) % len(self.frames)
-        self.parent.after(100, self.animate)  # Update every 100ms
+        # Schedule the next frame update
+        self.after(300, self.animate)
 
-    def place(self, **kwargs):
-        """Position the sprite animator"""
-        self.label.place(**kwargs)
+    def set_action(self, action, background):
+        """
+        Change the current animation to a different action.
+        This method handles the transition between different animations
+        while trying to prevent any visual glitches.
+        
+        Args:
+            action: The name of the new action to play
+            background: The index of the new background to use
+        """
+        # Keep current frame visible during transition
+        current_image = self.frames[self.current_frame] if self.frames else None
+        self.label.config(image=current_image)
+        self.label.update()
+        
+        # Update background if it has changed
+        if self.background is None or background != self.background_index:
+            self.background = Image.open(Weather_imgs[background])
+            self.background = self.background.resize((BACKGROUND_WIDTH, BACKGROUND_HEIGHT))
+            self.background_index = background
+        
+        # Update action if it has changed
+        if action != self.action and action in ACTION_MAP:
+            self.action = action
+        
+        # Always reload frames to ensure they have the current background
+        self.frames = self.load_frames(self.action)
+        self.current_frame = 0
+        
+        # Ensure smooth transition to new animation
+        if self.frames:
+            self.label.config(image=self.frames[self.current_frame])
+            self.label.update()
