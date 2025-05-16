@@ -1,12 +1,12 @@
 {
     "name": "Sekitoritchi",
-    "age": 20,
-    "weight": 231,
-    "mood": 2,
-    "health": 33,
+    "age": 37,
+    "weight": 221,
+    "mood": 3,
+    "health": 0,
     "poop": false,
-    "poop_level": 39,
-    "alive": true,
-    "action": "angry",
-    "background": 0
+    "poop_level": 50,
+    "alive": false,
+    "action": "dead",
+    "background": 5
 }

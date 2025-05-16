@@ -11,18 +11,13 @@ class Model:
     MOOD_ANGRY = 2
     MOOD_SAD = 3
 
-    def __init__(self, main_window=None):
+    def __init__(self):
         self.data_manager = DataManager()
         self._observers = []  # List to store observer callbacks
         self.load_game_state()
-        self.update_interval = 30  # Update stats every 30 seconds
         self.is_running = True
-        self.main_window = main_window
         self.is_updating = False
-        
-        # Start the timer if we have a main window
-        if self.main_window:
-            self.schedule_next_update()
+        self.secondary_action = None  # Initialize secondary_action
 
     def add_observer(self, callback):
         """Add an observer callback function"""
@@ -56,7 +51,7 @@ class Model:
         self.health = data["health"]
         self.poop = data["poop"]
         self.is_alive = data["alive"]
-        self.action = data["action"]
+        self.action = self.get_action_mood()
         self.background = data["background"]
         self.poop_level = data["poop_level"]
 
@@ -75,6 +70,10 @@ class Model:
             "background": self.background
         }
         return self.data_manager.save_data(data)
+    
+    def reset_game(self):
+        self.data_manager.reset_data()
+        self.load_game_state()
 
     def get_name(self) -> str:
         return self.name
@@ -108,7 +107,11 @@ class Model:
             return "sad"
         
     def get_action(self) -> str:
-        return self.action 
+        return self.action
+
+    def get_secondary_action(self):
+        """Get the current secondary action of the pet"""
+        return self.secondary_action
 
     def get_background(self) -> str:
         return self.background
@@ -136,8 +139,10 @@ class Model:
         self.poop = poop
         self._notify_observers()
 
-    def set_action(self, action: str):
+    def set_action(self, action, secondary_action=None):
+        """Set the current action of the pet"""
         self.action = action
+        self.secondary_action = secondary_action
         self._notify_observers()
     
     def set_background(self, background: int):
@@ -152,14 +157,16 @@ class Model:
         self.poop_level = poop_level
         self._notify_observers()
 
-    def schedule_next_update(self):
-        """Schedule the next stats update"""
-        if not self.is_running or not self.main_window:
-            return
-        try:
-            self.main_window.after(self.update_interval * 1000, self.update_stats)
-        except tk.TclError:
-            self.is_running = False
+    def should_trigger_poop_animation(self):
+        """Check if poop animation should be triggered"""
+        print(f"Checking poop trigger - level: {self.poop_level}")  # Debug print
+        if self.poop_level >= 75:
+            print("Poop level threshold reached!")  # Debug print
+            self.poop = True
+            # Poop affects health negatively
+            self.health = max(0, self.health - 3)
+            return True
+        return False
 
     def update_stats(self):
         """Update pet stats over time"""
@@ -168,6 +175,7 @@ class Model:
 
         try:
             self.is_updating = True  # Acquire lock
+            
             # Calculate base decrease based on current stats
             base_decrease = random.randint(1, 5)
             
@@ -186,7 +194,8 @@ class Model:
                 self.weight = max(0, self.weight - (base_decrease // 2))
 
             # Increase poop level more gradually
-            self.poop_level = min(100, self.poop_level + (base_decrease // 2))
+            self.poop_level = min(100, self.poop_level + 10)
+            print(f"Current poop level: {self.poop_level}")  # Debug print
             
             # Increment age
             self.age += 1
@@ -196,33 +205,23 @@ class Model:
                 self.is_alive = False
                 self.mood = self.MOOD_SAD
                 self.action = "dead"
-            # Update mood based on health with more granular ranges
-            elif self.health >= 75:
-                self.mood = self.MOOD_HAPPY
+            # Update mood based on health ranges with hysteresis
+            elif 75 <= self.health <= 100:
                 self.action = "happy"
-            elif self.health >= 60:
-                self.mood = self.MOOD_MIDDLE
+                self.mood = self.MOOD_HAPPY
+            elif 50 <= self.health < 75:
                 self.action = "middle"
-            elif self.health >= 30:
-                self.mood = self.MOOD_ANGRY
+                self.mood = self.MOOD_MIDDLE
+            elif 25 <= self.health < 50:
                 self.action = "angry"
+                self.mood = self.MOOD_ANGRY
             else:
-                self.mood = self.MOOD_SAD
                 self.action = "sad"
-
-            # Handle poop state
-            if self.poop_level >= 75:
-                self.poop_level = 0
-                self.poop = True
-                # Poop affects health negatively
-                self.health = max(0, self.health - 3)
+                self.mood = self.MOOD_SAD
 
             self.save_game_state()
             self._notify_observers()
             
-            # Schedule next update if still running
-            if self.is_running:
-                self.schedule_next_update()
         except tk.TclError:
             self.is_running = False
         finally:
@@ -231,7 +230,6 @@ class Model:
     def stop(self):
         """Stop the model and cleanup"""
         self.is_running = False
-        self.main_window = None
 
     def __del__(self):
         """Cleanup when the model is destroyed"""
@@ -273,3 +271,6 @@ class DataManager:
         except Exception as e:
             print(f"Error loading data: {e}")
             return self.default_data 
+        
+    def reset_data(self):
+        self.save_data(self.default_data)

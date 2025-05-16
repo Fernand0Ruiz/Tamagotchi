@@ -41,7 +41,7 @@ button_border_color = "#796344"
 class View:
     def __init__(self):
         self.app = ctk.CTk()
-        self.tamagotchi = Model(self.app)
+        self.tamagotchi = Model()
         self.controller = Controller(self.tamagotchi, self.app)
         self.tamagotchi.add_observer(self.update_view)
         self.name = None
@@ -50,7 +50,10 @@ class View:
         self.mood_image = None
         self.health_bar = None
         self.sprite_animator = None
+        # Store button references
+        self.action_buttons = []
         self.create_app()
+        self.update_view()
 
     def run(self):
         try:
@@ -93,11 +96,12 @@ class View:
         self.health_bar.place(relx=0.435, rely=0.125, anchor="center")
 
         # Make buttons Settings, Random Event, Sleep, Dance, Feed
-        self.make_buttons(self.controller.save_game, 0.17, 0.1025, bg_imgs[0], 1, 35)
+        self.make_buttons(self.settings_window, 0.17, 0.1025, bg_imgs[0], 1, 35)
         buttons_cmds = [self.controller.random_event, self.controller.sleep, self.controller.dance, self.controller.feed]
         for i in range(4):
             relx = 0.17 + (i * 0.22)
-            self.make_buttons(buttons_cmds[i], relx, 0.906, button_imgs[i], 2, 35)
+            button = self.make_buttons(buttons_cmds[i], relx, 0.906, button_imgs[i], 2, 35)
+            self.action_buttons.append(button)
 
     def make_buttons(self, cmd, relx, rely, image_path=None, border=None, size=None):
         button_image = ctk.CTkImage(Image.open(image_path), size=(size, size))
@@ -121,4 +125,55 @@ class View:
         mood_image = ctk.CTkImage(Image.open(mood_imgs[pet_stats["mood"]]), size=(22,22))
         self.mood_image.configure(image=mood_image)
         self.health_bar.set(pet_stats["health"] / 100)
-        self.sprite_animator.set_action(pet_stats["action"], pet_stats["background"]) 
+        
+        #check if tamagotchi is dead or alive 
+        if self.tamagotchi.get_is_alive() == False:
+            for button in self.action_buttons:
+                self.sprite_animator.set_action("dead", pet_stats["background"], self.tamagotchi.get_secondary_action())
+                button.configure(state="disabled", fg_color="light gray")
+        else:
+            self.sprite_animator.set_action(pet_stats["action"], pet_stats["background"], self.tamagotchi.get_secondary_action())
+            for button in self.action_buttons:
+                button.configure(state="normal", fg_color=button_color)
+
+    def settings_window(self):
+        settings_window = ctk.CTkToplevel(self.app)
+        settings_window.geometry("200x150")
+        settings_window.title("Settings")
+        settings_window.resizable(False, False) 
+        my_image = ctk.CTkImage(Image.open(bg_imgs[0]), size=(200,150))
+        image_label = ctk.CTkLabel(settings_window, image=my_image, text="")
+        image_label.pack(padx=0, pady=0)
+
+        self.make_settings_buttons("New Game", 0.5, 0.2, settings_window, lambda: [self.controller.reset_game(), self.update_view(), settings_window.destroy()])
+        self.make_settings_buttons("Save Game", 0.5, 0.5, settings_window, lambda: [self.controller.save_game(), self.update_view(), settings_window.destroy()])
+        self.make_settings_buttons("Change Name", 0.5, 0.8, settings_window, lambda: [self.show_name_dialog(), settings_window.destroy()])
+
+        # Make the settings window modal
+        settings_window.transient(self.app)
+        settings_window.grab_set()
+
+    def make_settings_buttons(self, text, relx, rely, settings_window, lambda_cmd):
+        new_game_button = ctk.CTkButton(
+            settings_window, 
+            text=text, 
+            command=lambda_cmd,
+            width=150, 
+            height=35, 
+            corner_radius=0, 
+            text_color=text_color,
+            fg_color=button_color, 
+            hover_color=button_hover_color, 
+            border_width=3, 
+            border_color=button_border_color
+        )
+        new_game_button.place(relx=relx, rely=rely, anchor="center")
+
+    def show_name_dialog(self):
+        dialog = ctk.CTkInputDialog(
+            text="Enter new name:",
+            title="Change Name"
+        )
+        new_name = dialog.get_input()
+        if new_name:
+            self.tamagotchi.set_name(new_name)

@@ -2,7 +2,7 @@ import tkinter as tk
 from PIL import Image, ImageTk
 
 # Sprite sheet and frame info
-SPRITE_SHEET = "Assets/sekitoritchi.png"  # Path to the sprite sheet containing all animations
+SPRITE_SHEET = "Assets/sprite.png"  # Path to the sprite sheet containing all animations
 FRAME_WIDTH = 75  # Width of each sprite frame in pixels
 FRAME_HEIGHT = 75  # Height of each sprite frame in pixels
 BACKGROUND_WIDTH = 300  # Width of the background image
@@ -40,10 +40,11 @@ ACTION_MAP = {
     "eat":(3, 0, 4),     # 4 frames starting at frame 0 in row 3
     "dead":(3, 4, 4),    # 4 frames starting at frame 4 in row 3
     "dessert":(3, 8, 4), # 4 frames starting at frame 8 in row 3
-    "peeing":(4, 0, 4),  # 4 frames starting at frame 0 in row 4
+    "pooping":(4, 0, 4),  # 4 frames starting at frame 0 in row 4
     "dance_reverse":(4, 4, 4), # 4 frames starting at frame 4 in row 4
     "attention":(5, 0, 4), # 4 frames starting at frame 0 in row 5
-    "look":(5, 4, 4)     # 4 frames starting at frame 4 in row 5
+    "look":(5, 4, 4),     # 4 frames starting at frame 4 in row 5
+    "poop":(5, 8, 1)     # 4 frames starting at frame 0 in row 6
 }
 ACTION_LIST = list(ACTION_MAP.keys())  # List of all available actions
 
@@ -56,7 +57,7 @@ class SpriteAnimator(tk.Frame):
     3. Displaying them in sequence to create animations
     4. Handling transitions between different actions
     """
-    def __init__(self, parent, action="idle", background=None):
+    def __init__(self, parent, action="idle", background=None, secondary_action=None):
         """
         Initialize the SpriteAnimator.
         
@@ -64,6 +65,7 @@ class SpriteAnimator(tk.Frame):
             parent: The parent tkinter widget where the animation will be displayed
             action: The initial animation to play (defaults to "idle")
             background: The index of the background image to use (optional)
+            secondary_action: Optional secondary action to composite alongside the main action
         """
         super().__init__(parent)
         # Load the main sprite sheet containing all animations
@@ -79,7 +81,8 @@ class SpriteAnimator(tk.Frame):
             
         # Initialize animation state
         self.action = action
-        self.frames = self.load_frames(action)
+        self.secondary_action = secondary_action
+        self.frames = self.load_frames(action, secondary_action)
         self.current_frame = 0
         
         # Create and set up the label that will display the animation
@@ -101,12 +104,13 @@ class SpriteAnimator(tk.Frame):
         # Don't preload frames as they need to be created with the current background
         pass
 
-    def load_frames(self, action):
+    def load_frames(self, action, secondary_action=None):
         """
         Load all frames for a specific action from the sprite sheet.
         
         Args:
             action: The name of the action to load frames for
+            secondary_action: Optional secondary action to composite alongside the main action
             
         Returns:
             list: A list of PhotoImage objects containing each frame of the animation
@@ -114,6 +118,21 @@ class SpriteAnimator(tk.Frame):
         frames = []
         # Get the frame information for this action
         row, start, count = ACTION_MAP[action]
+        
+        # Get secondary action info if provided
+        secondary_frames = []
+        if secondary_action and secondary_action in ACTION_MAP:
+            sec_row, sec_start, sec_count = ACTION_MAP[secondary_action]
+            for i in range(sec_start, sec_start + sec_count):
+                left = i * ORIGINAL_FRAME_WIDTH
+                upper = sec_row * ORIGINAL_FRAME_HEIGHT
+                right = left + ORIGINAL_FRAME_WIDTH
+                lower = upper + ORIGINAL_FRAME_HEIGHT
+                frame = self.sprite_sheet.crop((left, upper, right, lower))
+                frame = frame.resize((FRAME_WIDTH, FRAME_HEIGHT), Image.Resampling.LANCZOS)
+                if frame.mode != 'RGBA':
+                    frame = frame.convert('RGBA')
+                secondary_frames.append(frame)
         
         # Extract each frame from the sprite sheet
         for i in range(start, start + count):
@@ -141,6 +160,15 @@ class SpriteAnimator(tk.Frame):
                 
                 # Combine the frame with the background
                 composite.paste(frame, (x, y), frame.split()[3])
+                
+                # Add secondary action if provided
+                if secondary_frames:
+                    sec_frame = secondary_frames[i % len(secondary_frames)]
+                    # Position secondary sprite - you can adjust these values to change the position
+                    sec_x = x - FRAME_WIDTH + 20  # Position to the left of main sprite
+                    sec_y = y  # Same vertical position as main sprite
+                    composite.paste(sec_frame, (sec_x, sec_y+10), sec_frame.split()[3])
+                
                 frames.append(ImageTk.PhotoImage(composite))
             else:
                 # If no background, just use the frame
@@ -162,7 +190,7 @@ class SpriteAnimator(tk.Frame):
         # Schedule the next frame update
         self.after(300, self.animate)
 
-    def set_action(self, action, background):
+    def set_action(self, action, background, secondary_action=None):
         """
         Change the current animation to a different action.
         This method handles the transition between different animations
@@ -171,6 +199,7 @@ class SpriteAnimator(tk.Frame):
         Args:
             action: The name of the new action to play
             background: The index of the new background to use
+            secondary_action: Optional secondary action to composite alongside the main action
         """
         # Keep current frame visible during transition
         current_image = self.frames[self.current_frame] if self.frames else None
@@ -186,9 +215,13 @@ class SpriteAnimator(tk.Frame):
         # Update action if it has changed
         if action != self.action and action in ACTION_MAP:
             self.action = action
+            
+        # Update secondary action if provided
+        if secondary_action != self.secondary_action:
+            self.secondary_action = secondary_action
         
         # Always reload frames to ensure they have the current background
-        self.frames = self.load_frames(self.action)
+        self.frames = self.load_frames(self.action, self.secondary_action)
         self.current_frame = 0
         
         # Ensure smooth transition to new animation
