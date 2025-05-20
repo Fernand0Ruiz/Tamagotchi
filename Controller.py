@@ -3,61 +3,80 @@ import random
 import time
 import tkinter as tk
 
+#Random value ranges for different actions
+MIN = 3  # Minimum value for interactions (slightly better than base decrease)
+MAX = 5  # Maximum value for interactions (significantly better but not overwhelming)
+
 class Controller: 
 
-    def __init__(self, tamagotchi, main_window):
-        self.pet = tamagotchi
-        self.main_window = main_window
-        self.is_animating = False
-        self.background_index = self.pet.get_background()
+    def __init__(self, main_window, observer):
+        self.pet = Model(observer) # Initialize the model with the observer
+        self.main_window = main_window # Store the main window
+        self.is_animating = False # Track if the animation is playing
+        self.background_index = self.pet.get_background() # Get the background index
         self.update_interval = 15  # Update stats every 15 seconds
-        self.next_update_time = time.time() + self.update_interval
+        self.update_timer = None # Track the update timer
         # Start the update timer
-        self.schedule_next_update()
+        self.handle_update()
 
-    """Call this function to save the game state"""
+    """
+        Cancels the update timer if it exists.
+    """
+    def _cancel_update_timer(self):
+        if self.update_timer:
+            self.main_window.after_cancel(self.update_timer)
+            self.update_timer = None
+
+    """
+        Call this function to save the game state.
+    """
     def save_game(self):
         self.pet.save_game_state()
 
-    """Call this function to load the game state"""
+    """
+        Call this function to load the game state.
+    """
     def load_game(self):
         self.pet.load_game_state()
 
-    """Call this function to reset the game"""
+    """
+        Call this function to reset the game.
+    """
     def reset_game(self):
+        # Cancel any existing timer
+        self._cancel_update_timer()
         self.pet.reset_game()
         #Reset the animation state
         self.is_animating = False
-
-    """Schedule the next stats update"""
-    def schedule_next_update(self):
-        if not self.pet.is_running or not self.pet.is_alive:
-            return
-        try:
-            # Calculate time until next update
-            current_time = time.time()
-            time_until_update = max(0, self.next_update_time - current_time)
-            
-            # Schedule the update
-            self.update_timer = self.main_window.after(int(time_until_update * 1000), self.handle_update)
-        except tk.TclError:
-            self.pet.is_running = False
+        # Restart the update cycle
+        self.handle_update()
 
     """
-        Handles the stats update.
+        Handles the stats update and schedules the next update.
+        Uses absolute time to prevent drift and ensures clean timer management.
     """
     def handle_update(self):
-        print("handle_update called")  # Debug print
-        if not self.is_animating and self.pet.is_running and self.pet.is_alive:
-            print("Conditions met for update")  # Debug print
+        # Cancel any existing timer to prevent multiple timers
+        self._cancel_update_timer()
+
+        # Only proceed if pet is running, alive, and not animating
+        if self.pet.is_running and self.pet.is_alive and not self.is_animating:
+            print("Stats updated!")
             self.pet.update_stats()
-            # Check if we need to show poop animation
+
+            #Check if pet needs to poop 
             if self.pet.should_trigger_poop_animation():
-                print("Should trigger poop animation!")  # Debug print
                 self.make_poop()
-            # Schedule next update
-            self.next_update_time = time.time() + self.update_interval
-            self.schedule_next_update()
+
+        # Schedule next update using absolute time to prevent drift
+        self.update_timer = self.main_window.after(self.update_interval * 1000, self.handle_update)
+
+    """
+        Stops the update cycle and clean up timers.
+    """
+    def stop(self):
+        self._cancel_update_timer()
+        self.pet.stop()
 
     """
         Plays an animation for a specified duration then returns to idle.
@@ -87,9 +106,8 @@ class Controller:
         self.is_animating = False
         self.save_game()
 
-        #Check if we need to update stats, b/c of interupted animation
-        if time.time() >= self.next_update_time:
-            self.handle_update()
+        # Force an update check since animation might have delayed it
+        self.handle_update()
 
     """
         Feed action button, increases weight and health and decreases poop level.
@@ -98,7 +116,7 @@ class Controller:
     """
     def feed(self):
         if not self.is_animating and not self.pet.is_updating:
-            increase = self.get_random_number(1, 3)
+            increase = random.randint(MIN, MAX)
             self.pet.set_weight(self.pet.get_weight() + increase)
             self.pet.set_health(self.pet.get_health() + increase)
             self.pet.set_poop_level(self.pet.get_poop_level() + increase)
@@ -112,7 +130,7 @@ class Controller:
     """
     def dance(self):
         if not self.is_animating and not self.pet.is_updating:
-            increase = self.get_random_number(1, 3)
+            increase = random.randint(MIN, MAX)
 
             self.pet.set_health(self.pet.get_health() + increase)
             self.pet.set_poop_level(self.pet.get_poop_level() - increase)
@@ -126,7 +144,7 @@ class Controller:
     """
     def sleep(self):
         if not self.is_animating and not self.pet.is_updating:
-            increase = self.get_random_number(1, 3)
+            increase = random.randint(MIN, MAX)
             self.pet.set_weight(self.pet.get_weight() - increase)
             self.pet.set_health(self.pet.get_health() + increase)
             self.pet.set_poop_level(self.pet.get_poop_level() + increase)
@@ -145,7 +163,7 @@ class Controller:
     def random_event(self):
         if not self.is_animating and not self.pet.is_updating:
             #Dice roll possible outcomes
-            roll = {"fustrated":-5, "attention":-3, "look":3, "dance_reverse":5}
+            roll = {"fustrated":-MAX, "attention":-MIN, "look":MIN, "dance_reverse":MAX}
             #Change background to the next background index
             new_background = self.background_index + 1
             if(new_background > 7):
@@ -159,10 +177,14 @@ class Controller:
             duration = 5 if result[0] == "fustrated" else 3
             self.play_animation_sequence(result[0], duration)
 
+    """
+        Plays the poop animation and sets the poop visible to true, until cleaned.
+        Restores the poop level to 0, for next poop event.
+    """
     def make_poop(self):
         if not self.is_animating and not self.pet.is_updating:
+            print("Poop animation intiated.")
             self.play_animation_sequence("pooping", 2, "poop")
-            self.pet.set_poop(True)
             self.pet.set_poop_visible(True)
             self.pet.set_poop_level(0)
             self.save_game()
@@ -175,31 +197,26 @@ class Controller:
     """
     def clean_poop(self):
         if self.pet.get_poop_visible():
-            self.pet.set_poop(False)
+            print("Poop cleaned.")
             self.pet.set_poop_visible(False)
-            self.pet.set_poop_level(0)
             self.save_game()
             return True
         return False
 
     """
-    Returns a dictionary of the pet's stats. Instead of using getters and setters,
-    this is a more convinient way for mass updates.
+        Returns a dictionary of the pet's stats.
     """
     def get_pet(self):
-        stats = {}    
-        stats["name"] = self.pet.get_name()
-        stats["age"] = self.pet.get_age()
-        stats["weight"] = self.pet.get_weight()
-        stats["mood"] = self.pet.get_mood()
-        stats["health"] = self.pet.get_health()
-        stats["poop"] = self.pet.get_poop()
-        stats["poop_level"] = self.pet.get_poop_level()
-        stats["is_alive"] = self.pet.get_is_alive()
-        stats["action"] = self.pet.get_action()
-        stats["background"] = self.pet.get_background()
-        
-        return stats
-    
-    def get_random_number(self, min, max):
-        return random.randint(min, max)
+        return self.pet.get_pet()
+
+    """
+        Returns the secondary action of the pet.
+    """
+    def get_secondary_action(self) -> str:
+        return self.pet.get_secondary_action()
+
+    """
+        Sets the name of the pet.
+    """
+    def set_name(self, name: str):
+        self.pet.set_name(name)
