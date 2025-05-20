@@ -57,7 +57,7 @@ class SpriteAnimator(tk.Frame):
     3. Displaying them in sequence to create animations
     4. Handling transitions between different actions
     """
-    def __init__(self, parent, action="idle", background=None, secondary_action=None):
+    def __init__(self, parent, action="idle", background=None, secondary_action=None, secondary_action_position="left"):
         """
         Initialize the SpriteAnimator.
         
@@ -66,6 +66,7 @@ class SpriteAnimator(tk.Frame):
             action: The initial animation to play (defaults to "idle")
             background: The index of the background image to use (optional)
             secondary_action: Optional secondary action to composite alongside the main action
+            secondary_action_position: Position of secondary action ("left" or "right")
         """
         super().__init__(parent)
         # Load the main sprite sheet containing all animations
@@ -82,12 +83,16 @@ class SpriteAnimator(tk.Frame):
         # Initialize animation state
         self.action = action
         self.secondary_action = secondary_action
+        self.secondary_action_position = secondary_action_position
         self.frames = self.load_frames(action, secondary_action)
         self.current_frame = 0
         
         # Create and set up the label that will display the animation
         self.label = tk.Label(self)
         self.label.pack(expand=True, fill='both')
+        
+        # Make the label clickable
+        self.label.bind("<Button-1>", self.on_click)
         
         # Start the animation loop
         self.animate()
@@ -164,8 +169,11 @@ class SpriteAnimator(tk.Frame):
                 # Add secondary action if provided
                 if secondary_frames:
                     sec_frame = secondary_frames[i % len(secondary_frames)]
-                    # Position secondary sprite - you can adjust these values to change the position
-                    sec_x = x - FRAME_WIDTH + 20  # Position to the left of main sprite
+                    # Hardcode positioning based on secondary action type
+                    if self.secondary_action == "poop":
+                        sec_x = x + FRAME_WIDTH - 20  # Position poop on the right
+                    else:
+                        sec_x = x - FRAME_WIDTH + 20  # Position everything else (eating) on the left
                     sec_y = y  # Same vertical position as main sprite
                     composite.paste(sec_frame, (sec_x, sec_y+10), sec_frame.split()[3])
                 
@@ -180,7 +188,7 @@ class SpriteAnimator(tk.Frame):
         """
         Animate the sprite by cycling through frames.
         This method is called repeatedly to create the animation effect.
-        It updates the display every 350 milliseconds.
+        It updates the display every 100 milliseconds for smoother animation.
         """
         if self.frames:  # Only update if we have frames
             # Update the label with the current frame
@@ -188,9 +196,9 @@ class SpriteAnimator(tk.Frame):
             # Move to the next frame, looping back to 0 if we reach the end
             self.current_frame = (self.current_frame + 1) % len(self.frames)
         # Schedule the next frame update
-        self.after(300, self.animate)
+        self.after(100, self.animate)  # Reduced from 300ms to 100ms for smoother animation
 
-    def set_action(self, action, background, secondary_action=None):
+    def set_action(self, action, background, secondary_action=None, secondary_action_position="left"):
         """
         Change the current animation to a different action.
         This method handles the transition between different animations
@@ -200,6 +208,7 @@ class SpriteAnimator(tk.Frame):
             action: The name of the new action to play
             background: The index of the new background to use
             secondary_action: Optional secondary action to composite alongside the main action
+            secondary_action_position: Position of secondary action ("left" or "right")
         """
         # Keep current frame visible during transition
         current_image = self.frames[self.current_frame] if self.frames else None
@@ -219,6 +228,9 @@ class SpriteAnimator(tk.Frame):
         # Update secondary action if provided
         if secondary_action != self.secondary_action:
             self.secondary_action = secondary_action
+            
+        # Update secondary action position
+        self.secondary_action_position = secondary_action_position
         
         # Always reload frames to ensure they have the current background
         self.frames = self.load_frames(self.action, self.secondary_action)
@@ -228,3 +240,8 @@ class SpriteAnimator(tk.Frame):
         if self.frames:
             self.label.config(image=self.frames[self.current_frame])
             self.label.update()
+
+    def on_click(self, event):
+        """Handle click events on the sprite"""
+        # Forward the click event to the parent
+        self.event_generate("<<SpriteClick>>")

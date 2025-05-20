@@ -10,7 +10,7 @@ class Model:
     MOOD_MIDDLE = 1
     MOOD_ANGRY = 2
     MOOD_SAD = 3
-
+    MOOD_DEAD = 4
     def __init__(self):
         self.data_manager = DataManager()
         self._observers = []  # List to store observer callbacks
@@ -18,6 +18,7 @@ class Model:
         self.is_running = True
         self.is_updating = False
         self.secondary_action = None  # Initialize secondary_action
+        self.poop_visible = False  # Track if poop is currently visible
 
     def add_observer(self, callback):
         """Add an observer callback function"""
@@ -54,6 +55,7 @@ class Model:
         self.action = self.get_action_mood()
         self.background = data["background"]
         self.poop_level = data["poop_level"]
+        self.poop_visible = False  # Reset poop visibility on load
 
     def save_game_state(self):
         """Save the current game state"""
@@ -74,6 +76,7 @@ class Model:
     def reset_game(self):
         self.data_manager.reset_data()
         self.load_game_state()
+
 
     def get_name(self) -> str:
         return self.name
@@ -119,6 +122,10 @@ class Model:
     def get_poop_level(self) -> int:
         return self.poop_level
     
+    def get_poop_visible(self):
+        """Get whether poop is currently visible"""
+        return self.poop_visible
+
     def set_name(self,name: str):
         self.name = name
         self._notify_observers()
@@ -157,12 +164,18 @@ class Model:
         self.poop_level = poop_level
         self._notify_observers()
 
+    def set_poop_visible(self, visible):
+        """Set whether poop is currently visible"""
+        self.poop_visible = visible
+        self._notify_observers()
+
     def should_trigger_poop_animation(self):
         """Check if poop animation should be triggered"""
         print(f"Checking poop trigger - level: {self.poop_level}")  # Debug print
         if self.poop_level >= 75:
             print("Poop level threshold reached!")  # Debug print
             self.poop = True
+            self.poop_visible = True  # Set poop as visible
             # Poop affects health negatively
             self.health = max(0, self.health - 3)
             return True
@@ -177,24 +190,28 @@ class Model:
             self.is_updating = True  # Acquire lock
             
             # Calculate base decrease based on current stats
-            base_decrease = random.randint(1, 5)
+            base_decrease = random.randint(1, 2)  # Reduced from 1-5 to 1-2
             
             # Apply health and weight changes with condition adjustments
             if self.weight > 350:
                 # Overweight pets lose health faster
-                self.health = max(0, self.health - (base_decrease * 2))
-                self.weight = max(0, self.weight - base_decrease)
+                self.health = max(0, self.health - base_decrease)  # Reduced from base_decrease * 2
+                self.weight = max(0, self.weight - (base_decrease // 2))  # Reduced from base_decrease
             elif self.age > 50:
                 # Older pets lose health faster
-                self.health = max(0, self.health - int(base_decrease * 1.5))
-                self.weight = max(0, self.weight - (base_decrease // 2))
+                self.health = max(0, self.health - base_decrease)  # Reduced from int(base_decrease * 1.5)
+                self.weight = max(0, self.weight - (base_decrease // 3))  # Reduced from base_decrease // 2
             else:
                 # Normal decrease
-                self.health = max(0, self.health - base_decrease)
-                self.weight = max(0, self.weight - (base_decrease // 2))
+                self.health = max(0, self.health - (base_decrease // 2))  # Reduced from base_decrease
+                self.weight = max(0, self.weight - (base_decrease // 4))  # Reduced from base_decrease // 2
+
+            # Decrease health if poop is visible
+            if self.poop_visible:
+                self.health = max(0, self.health - 3)
 
             # Increase poop level more gradually
-            self.poop_level = min(100, self.poop_level + 10)
+            self.poop_level = min(100, self.poop_level + 5)  # Reduced from 10 to 5
             print(f"Current poop level: {self.poop_level}")  # Debug print
             
             # Increment age
@@ -203,7 +220,7 @@ class Model:
             # Check if pet is still alive first
             if self.health <= 0 or self.weight <= 0:
                 self.is_alive = False
-                self.mood = self.MOOD_SAD
+                self.mood = self.MOOD_DEAD
                 self.action = "dead"
             # Update mood based on health ranges with hysteresis
             elif 75 <= self.health <= 100:

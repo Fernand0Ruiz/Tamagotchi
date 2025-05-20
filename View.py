@@ -11,8 +11,7 @@ mood_imgs = [
     "Assets/Moods/mood_middle.png",
     "Assets/Moods/mood_angry.png",
     "Assets/Moods/mood_sad.png",
-    "Assets/Moods/mood_dance.png",
-    "Assets/Moods/mood_sleep.png"
+    "Assets/Moods/mood_dead.png"
 ]
 
 #Main assest, backgrounds, logos, etc. 
@@ -52,8 +51,10 @@ class View:
         self.sprite_animator = None
         # Store button references
         self.action_buttons = []
+        self.game_started = False
+        self.ui_initialized = False  # Add flag to track UI initialization
         self.create_app()
-        self.update_view()
+        self.show_start_menu()
 
     def run(self):
         try:
@@ -72,23 +73,161 @@ class View:
         image_label = ctk.CTkLabel(self.app, image=my_image, text="")
         image_label.pack(padx=0, pady=0)
 
+    def show_start_menu(self):
+        """Show the start menu before the game begins"""
+        # Create start menu frame
+        start_frame = ctk.CTkFrame(
+            self.app,
+            fg_color=background_label_color
+        )
+        start_frame.place(relx=0.5, rely=0.5, anchor="center", relwidth=1, relheight=1)
+        
+        # Add decorative border frame
+        border_frame = ctk.CTkFrame(
+            start_frame,
+            fg_color=button_border_color,
+            corner_radius=0,
+            width=280,
+            height=360
+        )
+        border_frame.place(relx=0.5, rely=0.5, anchor="center")
+        
+        # Add inner frame with background color
+        inner_frame = ctk.CTkFrame(
+            border_frame,
+            fg_color=background_label_color,
+            corner_radius=0,
+            width=270,
+            height=350
+        )
+        inner_frame.place(relx=0.5, rely=0.5, anchor="center")
+        
+        # Add small logo box at the top
+        logo_frame = ctk.CTkFrame(
+            inner_frame,
+            fg_color=button_color,
+            corner_radius=0,
+            width=70,
+            height=70
+        )
+        logo_frame.place(relx=0.5, rely=0.11, anchor="center")
+        
+        # Add logo in the box
+        logo_image = ctk.CTkImage(Image.open(bg_imgs[0]), size=(60, 60))
+        logo_label = ctk.CTkLabel(
+            logo_frame,
+            image=logo_image,
+            text="",
+            bg_color=button_color
+        )
+        logo_label.place(relx=0.5, rely=0.5, anchor="center")
+        
+        # Add title with decorative line
+        title_frame = ctk.CTkFrame(
+            inner_frame,
+            fg_color=button_border_color,
+            corner_radius=0,
+            width=200,
+            height=2
+        )
+        title_frame.place(relx=0.5, rely=0.24, anchor="center")
+        
+        title_label = ctk.CTkLabel(
+            inner_frame,
+            text="TAMAGOTCHI",
+            font=("Andale Mono", 18, "bold"),
+            text_color=text_color,
+            bg_color=background_label_color
+        )
+        title_label.place(relx=0.5, rely=0.24, anchor="center")
+        
+        # Add instructions text in a frame
+        instructions_frame = ctk.CTkFrame(
+            inner_frame,
+            fg_color=button_color,
+            corner_radius=0,
+            width=270,
+            height=210
+        )
+        instructions_frame.place(relx=0.5, rely=0.58, anchor="center")
+        
+        instructions = (
+        "HOW TO PLAY\n\n"
+        "Interact with your pet using the buttons below!\n"
+        "Each action influences its stats,\n"
+        "sometimes with a bit of luck.\n\n"
+        "CONTROLS\n"
+        "FEED — +Weight, +Health.\n"
+        "DANCE — -Weight, +Health, -Poop.\n"
+        "SLEEP — +Health, +Poop, +Scenery.\n"
+        "DICE ROLL — Random effect based on pet's reaction\n"
+        "to a scenery change.\n"
+        "CLICK POOP — Clean up after your pet or -Health \n"
+        "LOGO ICON — ACCESS SETTINGS\n"
+        "AUTO-SAVE and Pet Updates every 10 seconds\n"
+        "KEEP YOUR PET HAPPY & HEALTHY!\n\n"
+        "PRESS START TO BEGIN YOUR ADVENTURE!"
+        )
+        
+        instructions_label = ctk.CTkLabel(
+            instructions_frame,
+            text=instructions,
+            font=("Andale Mono", 9.25, "bold"),
+            text_color=text_color,
+            justify="left",
+            bg_color=button_color,
+            width=220,
+            height=160,
+            corner_radius=0,
+            anchor="w"
+        )
+        instructions_label.place(relx=0.5, rely=0.5, anchor="center")
+        
+        # Add start button
+        start_button = ctk.CTkButton(
+            inner_frame,
+            text="START",
+            command=lambda: self.start_game(start_frame),
+            width=100,
+            height=35,
+            corner_radius=0,
+            text_color=text_color,
+            fg_color=button_color,
+            hover_color=button_hover_color,
+            border_width=3,
+            border_color=button_border_color,
+            font=("Andale Mono", 14, "bold")
+        )
+        start_button.place(relx=0.5, rely=0.91, anchor="center")
+
+    def start_game(self, start_frame):
+        """Start the game and remove the start menu"""
+        self.game_started = True
+        start_frame.destroy()
+        self.create_game_ui()
+        self.update_view()
+
+    def create_game_ui(self):
+        """Create the main game UI elements"""
         # Get pet stats from the controller
         pet_stats = self.controller.get_pet()
 
         #make sprite animator
         self.sprite_animator = SpriteAnimator(self.app, action=pet_stats["action"], background=pet_stats["background"])
         self.sprite_animator.place(relx=0.5, rely=0.505, anchor="center")
+        
+        # Add click handler for poop
+        self.sprite_animator.bind("<<SpriteClick>>", self.handle_poop_click)
 
         #make labels
         self.name = self.make_labels(pet_stats["name"], 0.43, 0.08, ("Andale Mono", 14), text_color, background_label_color, 100, 14)  
         self.age = self.make_labels(f"Yrs:{pet_stats['age']}", 0.6725, 0.08, font, text_color, background_label_color, 25, 14)
         self.weight = self.make_labels(f"Lbs:{pet_stats['weight']}", 0.695, 0.124, font, text_color, background_label_color, 25, 14)
-        mood = self.make_labels("Mood", 0.85, 0.07, font, text_color, background_label_color, 25, 14)
 
         #make mood image and health bar
-        mood_image = ctk.CTkImage(Image.open(mood_imgs[pet_stats["mood"]]),size=(22,22))
+        mood_image = ctk.CTkImage(Image.open(mood_imgs[pet_stats["mood"]]),size=(30,30))
         self.mood_image = ctk.CTkLabel(self.app, image=mood_image, text="", bg_color=background_label_color,)
-        self.mood_image.place(relx=0.85, rely=0.120, anchor="center")
+        self.mood_image.place(relx=0.85, rely=0.105, anchor="center")
         self.health_bar = ctk.CTkProgressBar(self.app, width=100, height=10, corner_radius=0, 
                                         fg_color=button_color, progress_color="dark green")
         self.health_bar.pack(padx=0, pady=0)
@@ -102,6 +241,8 @@ class View:
             relx = 0.17 + (i * 0.22)
             button = self.make_buttons(buttons_cmds[i], relx, 0.906, button_imgs[i], 2, 35)
             self.action_buttons.append(button)
+            
+        self.ui_initialized = True  # Set flag after UI is created
 
     def make_buttons(self, cmd, relx, rely, image_path=None, border=None, size=None):
         button_image = ctk.CTkImage(Image.open(image_path), size=(size, size))
@@ -118,11 +259,13 @@ class View:
         return label
     
     def update_view(self):
+        if not self.ui_initialized:  # Only update if UI is initialized
+            return
         pet_stats = self.controller.get_pet()
         self.name.configure(text=pet_stats["name"])
         self.age.configure(text=f"Yrs:{pet_stats['age']}")
         self.weight.configure(text=f"Lbs:{pet_stats['weight']}")
-        mood_image = ctk.CTkImage(Image.open(mood_imgs[pet_stats["mood"]]), size=(22,22))
+        mood_image = ctk.CTkImage(Image.open(mood_imgs[pet_stats["mood"]]), size=(30,30))
         self.mood_image.configure(image=mood_image)
         self.health_bar.set(pet_stats["health"] / 100)
         
@@ -132,7 +275,14 @@ class View:
                 self.sprite_animator.set_action("dead", pet_stats["background"], self.tamagotchi.get_secondary_action())
                 button.configure(state="disabled", fg_color="light gray")
         else:
-            self.sprite_animator.set_action(pet_stats["action"], pet_stats["background"], self.tamagotchi.get_secondary_action())
+            # Get the current secondary action
+            secondary_action = self.tamagotchi.get_secondary_action()
+            
+            # Only show poop if there's no other active secondary action
+            if self.tamagotchi.get_poop_visible() and not secondary_action:
+                secondary_action = "poop"
+                
+            self.sprite_animator.set_action(pet_stats["action"], pet_stats["background"], secondary_action)
             for button in self.action_buttons:
                 button.configure(state="normal", fg_color=button_color)
 
@@ -177,3 +327,10 @@ class View:
         new_name = dialog.get_input()
         if new_name:
             self.tamagotchi.set_name(new_name)
+
+    def handle_poop_click(self, event):
+        """Handle clicks on the sprite area to clean up poop"""
+        print("Poop click detected!")  # Debug print
+        if self.controller.clean_poop():
+            print("Poop cleaned!")  # Debug print
+            self.update_view()

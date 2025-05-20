@@ -1,12 +1,12 @@
 {
-    "name": "Sekitoritchi",
-    "age": 37,
-    "weight": 221,
-    "mood": 3,
-    "health": 0,
+    "name": "Chip",
+    "age": 31,
+    "weight": 253,
+    "mood": 1,
+    "health": 73,
     "poop": false,
-    "poop_level": 50,
-    "alive": false,
-    "action": "dead",
-    "background": 5
+    "poop_level": 53,
+    "alive": true,
+    "action": "middle",
+    "background": 2
 }
