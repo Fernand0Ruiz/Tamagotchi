@@ -8,13 +8,13 @@ from PIL import Image, ImageTk
 
 # Sprite sheet configuration
 SPRITE_SHEET = "Assets/sprite.png"
-FRAME_WIDTH = 75
-FRAME_HEIGHT = 75
+DISPLAY_FRAME_WIDTH = 75
+DISPLAY_FRAME_HEIGHT = 75
 BACKGROUND_WIDTH = 300
 BACKGROUND_HEIGHT = 250
 SPRITE_Y_OFFSET = 60
-ORIGINAL_FRAME_WIDTH = 64
-ORIGINAL_FRAME_HEIGHT = 64
+SPRITE_SHEET_FRAME_WIDTH = 64
+SPRITE_SHEET_FRAME_HEIGHT = 64
 
 # Weather background images
 Weather_imgs = [
@@ -50,26 +50,24 @@ ACTION_MAP = {
 
 class SpriteAnimator(tk.Frame):
     """Handles sprite animation using a sprite sheet."""
-    def __init__(self, parent, action="idle", background=None, secondary_action=None):
+    def __init__(self, parent, action="idle", background=0, secondary_action=None):
         """Initialize the SpriteAnimator."""
         super().__init__(parent)
         self.sprite_sheet = Image.open(SPRITE_SHEET)
         
+        # Set background based off saved json file or default to morning
         self.background_index = background
-        if background is not None:
-            self.background = Image.open(Weather_imgs[background])
-            self.background = self.background.resize((BACKGROUND_WIDTH, BACKGROUND_HEIGHT))
-        else:
-            self.background = None
+        self.background = Image.open(Weather_imgs[background])
+        self.background = self.background.resize((BACKGROUND_WIDTH, BACKGROUND_HEIGHT))
             
         self.action = action
         self.secondary_action = secondary_action
         self.frames = self.load_frames(action, secondary_action)
         self.current_frame = 0
         
-        self.label = tk.Label(self)
-        self.label.pack(expand=True, fill='both')
-        self.label.bind("<Button-1>", self.on_click)
+        self.sprite_display = tk.Label(self)
+        self.sprite_display.pack(expand=True, fill='both')
+        self.sprite_display.bind("<Button-1>", self.on_click)
         
         self.animate()
 
@@ -84,81 +82,99 @@ class SpriteAnimator(tk.Frame):
         frames = []
         row, start, count = ACTION_MAP[action]
         
+        # Handle secondary action frames (like food when eating or poop when pooping)
         secondary_frames = []
         if secondary_action and secondary_action in ACTION_MAP:
+            # Get sprite object coordinates on sprite sheet
             sec_row, sec_start, sec_count = ACTION_MAP[secondary_action]
             for i in range(sec_start, sec_start + sec_count):
-                left = i * ORIGINAL_FRAME_WIDTH
-                upper = sec_row * ORIGINAL_FRAME_HEIGHT
-                right = left + ORIGINAL_FRAME_WIDTH
-                lower = upper + ORIGINAL_FRAME_HEIGHT
+                # Calculate crop coordinates for sprite sizing and positioning
+                left = i * SPRITE_SHEET_FRAME_WIDTH
+                upper = sec_row * SPRITE_SHEET_FRAME_HEIGHT
+                right = left + SPRITE_SHEET_FRAME_WIDTH
+                lower = upper + SPRITE_SHEET_FRAME_HEIGHT
+                # Crop and resize the secondary sprite frame
                 frame = self.sprite_sheet.crop((left, upper, right, lower))
-                frame = frame.resize((FRAME_WIDTH, FRAME_HEIGHT), Image.Resampling.LANCZOS)
+                frame = frame.resize((DISPLAY_FRAME_WIDTH, DISPLAY_FRAME_HEIGHT), Image.Resampling.LANCZOS)
                 secondary_frames.append(self._ensure_rgba(frame))
         
+        # Load main action frames
         for i in range(start, start + count):
-            left = i * ORIGINAL_FRAME_WIDTH
-            upper = row * ORIGINAL_FRAME_HEIGHT
-            right = left + ORIGINAL_FRAME_WIDTH
-            lower = upper + ORIGINAL_FRAME_HEIGHT
+            # Get sprite object coordinates on sprite sheet
+            left = i * SPRITE_SHEET_FRAME_WIDTH
+            upper = row * SPRITE_SHEET_FRAME_HEIGHT
+            right = left + SPRITE_SHEET_FRAME_WIDTH
+            lower = upper + SPRITE_SHEET_FRAME_HEIGHT
             
+            # Crop and resize the main sprite frame
             frame = self.sprite_sheet.crop((left, upper, right, lower))
-            frame = frame.resize((FRAME_WIDTH, FRAME_HEIGHT), Image.Resampling.LANCZOS)
+            frame = frame.resize((DISPLAY_FRAME_WIDTH, DISPLAY_FRAME_HEIGHT), Image.Resampling.LANCZOS)
             
-            if self.background:
-                composite = self.background.copy()
-                frame = self._ensure_rgba(frame)
-                    
-                x = (BACKGROUND_WIDTH - FRAME_WIDTH) // 2
-                y = (BACKGROUND_HEIGHT - FRAME_HEIGHT) // 2 + SPRITE_Y_OFFSET
+            # Create composite image with background
+            composite = self.background.copy()
+            frame = self._ensure_rgba(frame)
                 
-                composite.paste(frame, (x, y), frame.split()[3])
-                
-                if secondary_frames:
-                    sec_frame = secondary_frames[i % len(secondary_frames)]
-                    if self.secondary_action == "poop":
-                        sec_x = x + FRAME_WIDTH - 20
-                    else:
-                        sec_x = x - FRAME_WIDTH + 20
-                    sec_y = y
-                    composite.paste(sec_frame, (sec_x, sec_y+10), sec_frame.split()[3])
-                
-                frames.append(ImageTk.PhotoImage(composite))
-            else:
-                frames.append(ImageTk.PhotoImage(frame))
+            # Calculate center position for the sprite
+            x = (BACKGROUND_WIDTH - DISPLAY_FRAME_WIDTH) // 2
+            y = (BACKGROUND_HEIGHT - DISPLAY_FRAME_HEIGHT) // 2 + SPRITE_Y_OFFSET
+            
+            # Paste the main sprite onto the background
+            composite.paste(frame, (x, y), frame.split()[3])
+            
+            # If there's a secondary action, add it to the composite
+            if secondary_frames:
+                sec_frame = secondary_frames[i % len(secondary_frames)]
+                # Position secondary sprite based on type (poop goes to right, food goes to left)
+                if self.secondary_action == "poop":
+                    sec_x = x + DISPLAY_FRAME_WIDTH - 20
+                else:
+                    sec_x = x - DISPLAY_FRAME_WIDTH + 20
+                sec_y = y
+                # Paste the secondary sprite onto the composite
+                composite.paste(sec_frame, (sec_x, sec_y+10), sec_frame.split()[3])
+            
+            # Convert the composite to a Tkinter-compatible image and add to frames list
+            frames.append(ImageTk.PhotoImage(composite))
         
         return frames
 
     def animate(self):
         """Animate the sprite by cycling through frames."""
         if self.frames:
-            self.label.config(image=self.frames[self.current_frame])
+            # Set current frame
+            self.sprite_display.config(image=self.frames[self.current_frame])
+            # Increment frame index
             self.current_frame = (self.current_frame + 1) % len(self.frames)
+        # Cycle through each frame every 100ms
         self.after(100, self.animate)
 
     def set_action(self, action, background, secondary_action=None):
         """Change the current animation to a different action."""
         current_image = self.frames[self.current_frame] if self.frames else None
-        self.label.config(image=current_image)
-        self.label.update()
+        self.sprite_display.config(image=current_image)
+        self.sprite_display.update()
         
-        if self.background is None or background != self.background_index:
+        # Change background if it is different from the current background
+        if background != self.background_index:
             self.background = Image.open(Weather_imgs[background])
             self.background = self.background.resize((BACKGROUND_WIDTH, BACKGROUND_HEIGHT))
             self.background_index = background
         
+        # Change action if it is different from the current action
         if action != self.action and action in ACTION_MAP:
             self.action = action
             
+        # Change secondary action if it is different from the current secondary action
         if secondary_action != self.secondary_action:
-            self.secondary_action = secondary_action
-            
+            self.secondary_action = secondary_action    
+        
+        # Load new frames
         self.frames = self.load_frames(self.action, self.secondary_action)
         self.current_frame = 0
-        
+        # Set current frame to first frame
         if self.frames:
-            self.label.config(image=self.frames[self.current_frame])
-            self.label.update()
+            self.sprite_display.config(image=self.frames[self.current_frame])
+            self.sprite_display.update()
 
     def on_click(self, event):
         """Handle click events on the sprite."""

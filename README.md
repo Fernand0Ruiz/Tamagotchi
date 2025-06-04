@@ -2,7 +2,9 @@
 
 A modern implementation of the classic Tamagotchi virtual pet game, built with Python and CustomTkinter. This project combines nostalgic gameplay with modern programming practices and a polished user interface.
 
-<img src="Assets/logo.png" width="200" alt="Game Logo">
+<div align="center">
+  <img src="Assets/logo.png" width="200" alt="Game Logo">
+</div>
 
 ## Features
 
