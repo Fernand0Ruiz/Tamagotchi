@@ -46,9 +46,7 @@ class View:
         self.create_ui() #Create the main app window
         self.show_start_menu() #Show the start menu
 
-    """
-        Runs the main application loop and handles cleanup.
-    """
+    """ Runs the main application loop and handles cleanup. """
     def run(self):
         try:
             self.app.mainloop()
@@ -63,9 +61,7 @@ class View:
                 except Exception as e:
                     print(f"Error during cleanup: {str(e)}")
                 
-    """
-        Creates general UI elements and initializes the main application window.
-    """
+    """ Creates general UI elements and initializes the main application window. """
     def create_ui(self):
         # Set system settings and app properties
         self.app.geometry("300x400")
@@ -77,9 +73,7 @@ class View:
         image_label = ctk.CTkLabel(self.app, image=my_image, text="")
         image_label.pack(padx=0, pady=0)
 
-    """
-        Creates a start menu before the game begins.
-    """
+    """ Creates a start menu before the game begins. """
     def show_start_menu(self):
         # Create main frame that covers the entire window
         start_frame = ctk.CTkFrame(
@@ -209,17 +203,13 @@ class View:
         )
         start_button.place(relx=0.5, rely=0.91, anchor="center")
 
-    """
-        Starts the game and removes the start menu.
-    """
+    """ Starts the game and removes the start menu. """
     def start_game(self, start_frame):
         start_frame.destroy()
         self.create_game_ui()
         self.update_view()
 
-    """
-        Creates the main game UI elements.
-    """
+    """ Creates the main game UI elements. """
     def create_game_ui(self):
         # Get pet stats from the controller
         pet_stats = self.controller.get_pet()
@@ -259,9 +249,7 @@ class View:
             
         self.ui_initialized = True  # Set flag after UI is created
 
-    """
-        Updates the view with the current pet stats. Used as the observer callback.
-    """
+    """ Updates the view with the current pet stats. Used as the observer callback. """
     def update_view(self):
         if not self.ui_initialized:  # Only update if UI is initialized
             return
@@ -293,9 +281,7 @@ class View:
             # Set the sprite animator action
             self.sprite_animator.set_action(pet_stats["action"], pet_stats["background"], secondary_action)
 
-    """
-        Updates the state of all action buttons based on pet's status.
-    """    
+    """ Updates the state of all action buttons based on pet's status. """    
     def update_button_states(self, is_alive=True):
         for button in self.action_buttons:
             if is_alive:
@@ -303,9 +289,7 @@ class View:
             else:
                 button.configure(state="disabled", fg_color="light gray")
 
-    """
-        Makes a label with the given text, position, font, text color, background color, width, and height.
-    """
+    """ Makes a label with the given text, position, font, text color, background color, width, and height. """
     def make_labels(self, text, relx, rely, font, text_color, bg_color, width, height):
         label = ctk.CTkLabel(
             self.app,
@@ -319,9 +303,7 @@ class View:
         label.place(relx=relx, rely=rely, anchor="center")
         return label
     
-    """
-        Makes interaction buttons with the given text, position, and command.
-    """
+    """ Makes interaction buttons with the given text, position, and command. """
     def make_interaction_buttons(self, cmd, relx, rely, image_path=None, border=None, size=None):
         interaction_button_image = ctk.CTkImage(Image.open(image_path), size=(size, size))
         new_interaction_button = ctk.CTkButton(
@@ -340,9 +322,7 @@ class View:
         new_interaction_button.place(relx=relx, rely=rely, anchor="center")
         return new_interaction_button
     
-    """
-        Makes settings buttons with the given text, position, and command.
-    """
+    """ Makes settings buttons with the given text, position, and command. """
     def make_settings_buttons(self, text, relx, rely, settings_window, lambda_cmd):
         new_settings_button = ctk.CTkButton(
             settings_window, 
@@ -359,16 +339,12 @@ class View:
         )
         new_settings_button.place(relx=relx, rely=rely, anchor="center")
 
-    """
-        Handles clicks on the sprite area to clean up poop.
-    """
+    """ Handles clicks on the sprite area to clean up poop. """
     def handle_poop_click(self, event):
         if self.controller.clean_poop():
             self.update_view()
 
-    """
-        Shows a dialog to change the name of the tamagotchi.
-    """
+    """ Shows a dialog to change the name of the tamagotchi. """
     def show_name_dialog(self):
         dialog = ctk.CTkInputDialog(
             text="Enter new name:",
@@ -378,9 +354,7 @@ class View:
         if new_name:
             self.controller.set_name(new_name)
 
-    """
-        Creates the settings window.
-    """
+    """ Creates the settings window. """
     def settings_window(self):
         settings_window = ctk.CTkToplevel(self.app)
         settings_window.geometry("200x150")

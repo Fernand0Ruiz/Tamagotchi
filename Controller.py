@@ -19,29 +19,21 @@ class Controller:
         # Start the update timer
         self.handle_update()
 
-    """
-        Cancels the update timer if it exists.
-    """
+    """ Cancels the update timer if it exists. """
     def _cancel_update_timer(self):
         if self.update_timer:
             self.main_window.after_cancel(self.update_timer)
             self.update_timer = None
 
-    """
-        Call this function to save the game state.
-    """
+    """ Call this function to save the game state. """
     def save_game(self):
         self.pet.save_game_state()
 
-    """
-        Call this function to load the game state.
-    """
+    """ Call this function to load the game state. """
     def load_game(self):
         self.pet.load_game_state()
 
-    """
-        Call this function to reset the game.
-    """
+    """ Call this function to reset the game. """
     def reset_game(self):
         # Cancel any existing timer
         self._cancel_update_timer()
@@ -71,9 +63,7 @@ class Controller:
         # Schedule next update using absolute time to prevent drift
         self.update_timer = self.main_window.after(self.update_interval * 1000, self.handle_update)
 
-    """
-        Stops the update cycle and clean up timers.
-    """
+    """ Stops the update cycle and clean up timers. """
     def stop(self):
         self._cancel_update_timer()
         self.pet.stop()
@@ -95,9 +85,7 @@ class Controller:
             return True
         return False
 
-    """
-        Returns the pets to it's idle state after being interacted with. 
-    """ 
+    """ Returns the pets to it's idle state after being interacted with. """ 
     def return_to_idle(self):
         self.pet.set_action(self.pet.get_action_mood())
         self.pet.set_background(self.background_index)
@@ -192,9 +180,7 @@ class Controller:
             if self.pet.is_updating:
                 self.main_window.after(100, self.make_poop)
 
-    """
-        Cleans up poop by resting poop stats to 0, for the next poop event.
-    """
+    """ Cleans up poop by resting poop stats to 0, for the next poop event. """
     def clean_poop(self):
         if self.pet.get_poop_visible():
             print("Poop cleaned.")
@@ -203,20 +189,14 @@ class Controller:
             return True
         return False
 
-    """
-        Returns a dictionary of the pet's stats.
-    """
+    """ Returns a dictionary of the pet's stats. """
     def get_pet(self):
         return self.pet.get_pet()
 
-    """
-        Returns the secondary action of the pet.
-    """
+    """ Returns the secondary action of the pet. """
     def get_secondary_action(self) -> str:
         return self.pet.get_secondary_action()
 
-    """
-        Sets the name of the pet.
-    """
+    """ Sets the name of the pet. """
     def set_name(self, name: str):
         self.pet.set_name(name)

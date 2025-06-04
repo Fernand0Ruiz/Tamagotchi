@@ -47,7 +47,6 @@ ACTION_MAP = {
     "look":   (5, 4, 4),    
     "poop":   (5, 8, 1)     
 }
-ACTION_LIST = list(ACTION_MAP.keys())
 
 class SpriteAnimator(tk.Frame):
     """Handles sprite animation using a sprite sheet."""
@@ -74,6 +73,12 @@ class SpriteAnimator(tk.Frame):
         
         self.animate()
 
+    def _ensure_rgba(self, frame):
+        """Helper method to ensure frame is in RGBA mode."""
+        if frame.mode != 'RGBA':
+            return frame.convert('RGBA')
+        return frame
+
     def load_frames(self, action, secondary_action=None):
         """Load frames for a specific action from the sprite sheet."""
         frames = []
@@ -89,9 +94,7 @@ class SpriteAnimator(tk.Frame):
                 lower = upper + ORIGINAL_FRAME_HEIGHT
                 frame = self.sprite_sheet.crop((left, upper, right, lower))
                 frame = frame.resize((FRAME_WIDTH, FRAME_HEIGHT), Image.Resampling.LANCZOS)
-                if frame.mode != 'RGBA':
-                    frame = frame.convert('RGBA')
-                secondary_frames.append(frame)
+                secondary_frames.append(self._ensure_rgba(frame))
         
         for i in range(start, start + count):
             left = i * ORIGINAL_FRAME_WIDTH
@@ -104,9 +107,7 @@ class SpriteAnimator(tk.Frame):
             
             if self.background:
                 composite = self.background.copy()
-                
-                if frame.mode != 'RGBA':
-                    frame = frame.convert('RGBA')
+                frame = self._ensure_rgba(frame)
                     
                 x = (BACKGROUND_WIDTH - FRAME_WIDTH) // 2
                 y = (BACKGROUND_HEIGHT - FRAME_HEIGHT) // 2 + SPRITE_Y_OFFSET
