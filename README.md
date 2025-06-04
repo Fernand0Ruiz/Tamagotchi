@@ -2,7 +2,7 @@
 
 A modern implementation of the classic Tamagotchi virtual pet game, built with Python and CustomTkinter. This project combines nostalgic gameplay with modern programming practices and a polished user interface.
 
-![Game Screenshot](Assets/logo.png)
+<img src="Assets/logo.png" width="200" alt="Game Logo">
 
 ## Features
 
@@ -85,30 +85,8 @@ python-tamagotchi/
 └── save_file.json     # Game save data
 ```
 
-## Configuration
-
-[Describe any configuration steps or environment variables needed]
-
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
 ## Acknowledgments
 
 - Inspired by the original Tamagotchi virtual pet
 - Built with CustomTkinter for modern UI elements
 - Uses the Observer pattern for efficient updates
-
-## Contact
-
-Your Name - [@yourtwitter](https://twitter.com/yourtwitter) - email@example.com
-
-Project Link: [https://github.com/yourusername/python-tamagotchi](https://github.com/yourusername/python-tamagotchi) 
